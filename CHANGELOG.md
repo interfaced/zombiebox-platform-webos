@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0 (23.07.2019)
+
+### Features
+* `Video` and `Device` classes adapted to removal of video container from ZombieBox.
+
 ## 2.0.0 (13.06.2019)
 
 ### Improvements
