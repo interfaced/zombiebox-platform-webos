@@ -113,11 +113,10 @@ class PlatformWebOS extends AbstractPlatform {
 			stdio: [process.stdin, process.stdout, process.stderr]
 		});
 
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			packageBuild.on('close', (code, signal) => {
 				if (code !== 0) {
-					console.error(`${aresPackageBin} process terminated due to receipt of signal ${signal}`);
-					reject();
+					throw new Error(`${aresPackageBin} process terminated with signal ${signal}`);
 				} else {
 					console.log(`The ipk package was built into ${distDir}`);
 					resolve();
@@ -176,12 +175,12 @@ class PlatformWebOS extends AbstractPlatform {
 	async _checkAndFilterImages(files) {
 		/**
 		 * @param {boolean} condition
-		 * @param {function(): string} getRejectMessage
+		 * @param {function(): Error} getRejectReason
 		 * @return {Promise}
 		 */
-		const promisifyBoolean = (condition, getRejectMessage) => condition ?
+		const promisifyBoolean = (condition, getRejectReason) => condition ?
 			Promise.resolve() :
-			Promise.reject(getRejectMessage());
+			Promise.reject(getRejectReason());
 
 		/**
 		 * @param {Array<function(): Promise>} checks
@@ -201,13 +200,13 @@ class PlatformWebOS extends AbstractPlatform {
 			const requiredSize = PlatformWebOS.ImageSize[imageName];
 
 			return [
-				() => promisifyBoolean(!!requiredSize, () => `Unknown image "${imageName}"`),
-				() => promisifyBoolean(extension === '.png', () => `${imageName} is not a png file`),
+				() => promisifyBoolean(!!requiredSize, () => new Error(`Unknown image "${imageName}"`)),
+				() => promisifyBoolean(extension === '.png', () => new Error(`${imageName} is not a png file`)),
 				() => fse.exists(imagePath)
 					.then((exists) =>
 						exists ?
 							Promise.resolve() :
-							Promise.reject(`Could not find "${imageName}" by path ${imagePath}`)
+							Promise.reject(new Error(`Could not find "${imageName}" by path ${imagePath}`))
 					),
 				() => new Promise((resolve, reject) => {
 					try {
@@ -215,14 +214,14 @@ class PlatformWebOS extends AbstractPlatform {
 						const [requiredWidth, requiredHeight] = requiredSize;
 
 						if (width !== requiredWidth || height !== requiredHeight) {
-							reject(
+							reject(new Error(
 								`Incorrect size of ${basename}: ` +
 								`expected ${requiredWidth}x${requiredHeight}, ` +
 								`got ${width}x${height}`
-							);
+							));
 						}
 					} catch (e) {
-						reject(`Failed to read size of ${basename}: ${e.message}`);
+						reject(new Error(`Failed to read size of ${basename}: ${e.message}`));
 					}
 
 					resolve();

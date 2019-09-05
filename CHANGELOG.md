@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1 (05.09.2019)
+
+### Improvements
+* Use webOS pointer detection api instead of sniffing mouse events
+* Update to ESLint 6
+
 ## 2.1.0 (23.07.2019)
 
 ### Features

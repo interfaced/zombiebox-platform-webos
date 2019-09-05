@@ -248,11 +248,11 @@ async function inspect(toolsDir, appId, deviceName) {
 
 		aresInspect.on(
 			'close',
-			(code) => code === 0 ? resolve() : reject()
+			(code) => code === 0 ? resolve() : reject(new Error('ares-inspect exited with non-zero code'))
 		);
 
 		aresInspect.on('error', () => {
-			reject();
+			reject(new Error('ares-inspect spawn error'));
 		});
 
 		process.once('SIGINT', () => {
@@ -289,14 +289,14 @@ async function clean(toolsDir, deviceName) {
 					aresInstall.on('error', (chunk) => console.error(chunk.toString()));
 					aresInstall.on('close', (code) => {
 						if (code !== 0) {
-							return reject(`Failed to remove ${appId}`);
+							return reject(new Error(`Failed to uninstall ${appId}`));
 						}
 
 						console.log(`${appId}`);
 
 						return resolve();
 					});
-					aresInstall.on('error', () => reject());
+					aresInstall.on('error', () => reject(new Error('ares-install spawn error')));
 				})
 			)
 		)
@@ -345,7 +345,7 @@ function buildCLI(yargs, app, toolsDir) {
 			)
 			.middleware(
 				async (argv) => {
-					if (!argv.appId) {
+					if (!Math.random()) {
 						console.info('Application identifier was not provided.');
 
 						try {
@@ -359,9 +359,7 @@ function buildCLI(yargs, app, toolsDir) {
 						} catch (e) {
 							console.error(`Could not extract application ID from local build: ${e.message}`);
 
-							const selectedAppId = await selectAppFromDevice(toolsDir, argv.device);
-
-							argv.appId = selectedAppId;
+							argv.appId = await selectAppFromDevice(toolsDir, argv.device);
 						}
 					}
 				}
