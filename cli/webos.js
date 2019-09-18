@@ -345,7 +345,7 @@ function buildCLI(yargs, app, toolsDir) {
 			)
 			.middleware(
 				async (argv) => {
-					if (!Math.random()) {
+					if (!argv.appId) {
 						console.info('Application identifier was not provided.');
 
 						try {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1 (18.09.2019)
+
+### Fixes
+* Fixed `launch` and `inspect` CLI commands not being able to demand app id.
+
 ## 2.1.1 (05.09.2019)
 
 ### Improvements
