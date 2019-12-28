@@ -11,9 +11,16 @@ const crypto = require('crypto');
 const fse = require('fs-extra');
 const imageSize = require('image-size');
 const path = require('path');
-const {spawn} = require('child_process');
+const inquirer = require('inquirer');
 const {AbstractPlatform, utils: {mergeConfigs}} = require('zombiebox');
-const buildCLI = require('./cli/webos.js');
+const {
+	getInstalledApps,
+	build,
+	install,
+	launch,
+	inspect,
+	uninstall
+} = require('./cli/ares');
 
 
 /**
@@ -42,23 +49,188 @@ class PlatformWebOS extends AbstractPlatform {
 				webos: {
 					toolsDir: null
 				}
-			}
+			},
+
+			include: [
+				{
+					name: 'webOS PalmSystem',
+					externs: [
+						path.resolve(__dirname, 'externs', 'palmsystem.js'),
+						path.resolve(__dirname, 'externs', 'palmservicebridge.js')
+					]
+				}
+			]
 		};
 	}
 
 	/**
 	 * @override
 	 */
-	buildCLI(yargs, application) {
-		return buildCLI(yargs, application, getToolsDir(application.getConfig()));
+	buildCLI(yargs, app) {
+		const config = app.getConfig();
+		const distPath = app.getPathHelper().getDistDir({
+			baseDir: config.project.dist,
+			version: app.getAppVersion(),
+			platformName: 'webos'
+		});
+		const toolsDir = config.platforms.webos.toolsDir;
+
+		/**
+		 * @param {string} toolsDir
+		 * @param {string} deviceName
+		 * @return {Promise<string>}
+		 */
+		const selectAppFromDevice = async (toolsDir, deviceName) => {
+			const installedApps = await getInstalledApps(toolsDir, deviceName);
+
+			if (!installedApps.length) {
+				throw new Error('No apps installed on device');
+			}
+
+			const {appId} = await inquirer.prompt({
+				type: 'list',
+				name: 'appId',
+				message: 'Select which application to run (sorted from newest to oldest)',
+				choices: installedApps.reverse()
+			});
+
+			return appId;
+		};
+
+		const logify = (promise) => promise
+			.catch((error) => {
+				if (error) {
+					console.error(error.message);
+				}
+			});
+
+		/**
+		 * @param {Yargs} yargs
+		 * @return {Yargs}
+		 */
+		const demandAppId = (yargs) =>
+			yargs
+				.positional(
+					'appId',
+					{
+						describe: 'Application ID to use, if not provided will be detected',
+						alias: 'app-id',
+						type: 'string'
+					}
+				)
+				.middleware(
+					async (argv) => {
+						if (!argv.appId) {
+							console.info('Application identifier was not provided.');
+
+							try {
+								argv.appId = await this._findAppId(distPath);
+
+								console.warn(`Using application ID ${argv.appId} from local build folder`);
+							} catch (e) {
+								console.error(`Could not extract application ID from local build: ${e.message}`);
+
+								argv.appId = await selectAppFromDevice(toolsDir, argv.device);
+							}
+						}
+					}
+				);
+
+		/**
+		 * @param {Yargs} yargs
+		 * @return {Yargs}
+		 */
+		const demandDevice = (yargs) => yargs
+			.positional('device', {
+				describe: 'Device name',
+				type: 'string'
+			});
+
+		return yargs
+			.command(
+				'install <device>',
+				'Install app on a device',
+				demandDevice,
+				async ({device}) => {
+					const ipk = await this._findIpk(distPath);
+
+					logify(install(toolsDir, ipk, device));
+				}
+			)
+			.command(
+				'launch <device> [appId]',
+				'Launch app on a device',
+				(yargs) => {
+					demandDevice(yargs);
+					demandAppId(yargs);
+				},
+				({device, appId}) => logify(launch(toolsDir, appId, device))
+			)
+			.command(
+				'inspect <device> [appId]',
+				'Inspect app on a device',
+				(yargs) => {
+					demandDevice(yargs);
+					demandAppId(yargs);
+				},
+				({device, appId}) => logify(inspect(toolsDir, appId, device))
+			)
+			.command(
+				'uninstall <device> [appId]',
+				'Remove installed app from a device',
+				(yargs) => {
+					demandDevice(yargs);
+					demandAppId(yargs);
+				},
+				({device, appId}) => logify(uninstall(toolsDir, appId, device))
+			)
+			.command(
+				'list <device>',
+				'List installed applications on a device',
+				demandDevice,
+				async ({device}) => {
+					const apps = await logify(getInstalledApps(toolsDir, device));
+					if (!apps) {
+						return;
+					}
+					if (apps.length) {
+						console.log('Installed applications:');
+						console.log(apps.join('\n'));
+					} else {
+						console.log('No apps installed');
+					}
+				}
+			)
+			.command(
+				'clean <device>',
+				'Remove all installed apps from a device',
+				demandDevice,
+				async ({device}) => {
+					const installedApps = await getInstalledApps(toolsDir, device);
+
+					if (!installedApps.length) {
+						console.log('No apps installed');
+						return;
+					}
+
+					const {confirmed} = await inquirer.prompt({
+						type: 'checkbox',
+						name: 'confirmed',
+						message: 'Following applications will be removed:',
+						choices: installedApps,
+						default: installedApps
+					});
+
+					return Promise.all(confirmed.map((appId) => logify(uninstall(toolsDir, appId, device))));
+				}
+			)
+			.demandCommand(1, 1, 'No command specified');
 	}
 
 	/**
 	 * @override
 	 */
 	async buildApp(app, distDir) {
-		const getAresPackageBinPath = (toolsDir) => path.join(toolsDir, 'ares-package');
-
 		/**
 		 * @type {Array<string>}
 		 */
@@ -66,7 +238,6 @@ class PlatformWebOS extends AbstractPlatform {
 		const buildHelper = app.getBuildHelper();
 		const config = app.getConfig();
 		const {name, version} = app.getAppPackageJson();
-		const toolsDir = getToolsDir(config);
 		/**
 		 * @type {PlatformWebOS.Config}
 		 */
@@ -97,32 +268,9 @@ class PlatformWebOS extends AbstractPlatform {
 
 		await fse.writeJson(path.join(distDir, 'appinfo.json'), resultAppInfo);
 
-		await this._buildIpkPackage(getAresPackageBinPath(toolsDir), distDir);
+		await build(config.platforms.webos.toolsDir, distDir);
 
 		return warnings.filter(Boolean).join('\n');
-	}
-
-	/**
-	 * @param {string} aresPackageBin
-	 * @param {string} distDir
-	 * @return {Promise}
-	 * @protected
-	 */
-	_buildIpkPackage(aresPackageBin, distDir) {
-		const packageBuild = spawn(aresPackageBin, [distDir, '-o', distDir], {
-			stdio: [process.stdin, process.stdout, process.stderr]
-		});
-
-		return new Promise((resolve) => {
-			packageBuild.on('close', (code, signal) => {
-				if (code !== 0) {
-					throw new Error(`${aresPackageBin} process terminated with signal ${signal}`);
-				} else {
-					console.log(`The ipk package was built into ${distDir}`);
-					resolve();
-				}
-			});
-		});
 	}
 
 	/**
@@ -308,23 +456,55 @@ class PlatformWebOS extends AbstractPlatform {
 				return accumulator;
 			}, {});
 	}
+
+	/**
+	 * @param {string} distPath
+	 * @return {Object}
+	 * @protected
+	 */
+	async _getAppInfo(distPath) {
+		const rawAppInfo = await fse.readFile(path.join(distPath, 'appinfo.json'));
+
+		return JSON.parse(rawAppInfo);
+	}
+
+	/**
+	 * @param {string} distPath
+	 * @return {string}
+	 * @protected
+	 */
+	async _findAppId(distPath) {
+		const {id} = await this._getAppInfo(distPath);
+
+		if (!id) {
+			throw new Error('There is no Application ID in appinfo.json');
+		}
+
+		return id;
+	}
+
+	/**
+	 * @param {string} distPath
+	 * @return {string}
+	 * @protected
+	 */
+	async _findIpk(distPath) {
+		const distFilenames = await fse.readdir(distPath);
+		const ipkFilename = distFilenames.find((filename) => filename.endsWith('.ipk'));
+
+		if (!ipkFilename) {
+			throw new Error(`There is no .ipk file in ${distPath}`);
+		}
+
+		return path.join(distPath, ipkFilename);
+	}
 }
 
 
 /**
- * @param {Config} config
- * @return {string}
+ * @typedef {?}
  */
-function getToolsDir(config) {
-	const toolsDir = config.platforms.webos.toolsDir || process.env.WEBOS_CLI_TV;
-
-	if (!toolsDir) {
-		throw new Error('Cannot get cli tools directory path. Check README for possible solution');
-	}
-
-	return toolsDir;
-}
-
+let Yargs;
 
 /**
  * @see http://webosose.org/develop/configuration-files/appinfo-json/
@@ -350,7 +530,7 @@ PlatformWebOS.AppInfo;
 /**
  * @typedef {{
  *     img: Object<PlatformWebOS.ImageName, string>,
- *     appinfo: AppInfo
+ *     appinfo: Object
  * }}
  */
 PlatformWebOS.Config;

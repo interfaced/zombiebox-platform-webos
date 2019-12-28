@@ -73,6 +73,8 @@ class Application extends BaseApplication {
 ```
 
 ### Install Application
+Before installing applications Developer Mode must be enabled on device and it must be connected with PC with webOS SDK CLI. See [App Testing](http://webostv.developer.lge.com/develop/app-test/).
+
 To install an .ipk file on the TV use `zb webos install`. Pass the device name as a parameter. Application with the same ID will be replaced by newer one.
 ```bash
 zb webos install --device $deviceName

@@ -6,14 +6,20 @@ module.exports = {
 			extends: 'interfaced/esm',
 			settings: {
 				'import/resolver': 'zombiebox'
+			},
+			globals: {
+				// see externs
+				'PalmServiceBridge': 'readonly',
+				'PalmSystem': 'readonly'
 			}
 		},
 		{
-			files: ['index.js', 'cli/webos.js'],
-			extends: 'interfaced/node',
-			rules: {
-				'require-atomic-updates': 'off' // Too aggressive with way too many false positives: https://github.com/eslint/eslint/issues/11899
-			},
+			files: ['index.js', 'cli/**/*.js'],
+			extends: 'interfaced/node'
+		},
+		{
+			files: ['externs/**/*.js'],
+			extends: 'interfaced/externs'
 		}
 	]
 };

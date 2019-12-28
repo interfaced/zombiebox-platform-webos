@@ -1,6 +1,51 @@
 # Changelog
 
-## 2.1.1 (18.09.2019)
+## 2.2.0 (28.12.2019)
+
+Functionally identical to `2.2.0-rc.1`. Changes listed are since last stable release (`2.1.2`)
+
+* Introduced `IStatefulVideo` implementation with state machine and DRM support
+* CLI refactored, `cli/ares.js` now exposes pure functions to work with webOS ares utilities
+* CLI device and app id arguments are now positional to be more consistent with other platforms
+* Disable unnecessary second minification step when building `.ipk`
+
+## 2.2.0-rc.1 (27.12.2019)
+
+* Fix issues with CLI tools on Windows
+* DRM stability improved
+* Added webOS `MediaOption` API `PrepareOption`
+* Disable unnecessary second minification step when building `.ipk`
+
+## 2.2.0-alpha.5 (19.12.2019)
+* Improve stability of DRM operations
+
+## 2.2.0-alpha.5 (16.12.2019)
+* Updated `Viewport` to always deal in app coordinates 
+* Implement `getPanelResolution` and `getOSDResolution` in `Info`
+
+## 2.2.0-alpha.4 (12.12.2019)
+
+### Improvements
+* CLI refactored, `cli/ares.js` now exposes pure functions to work with webOS ares utilities.
+* CLI device and app id arguments are now positional to be more consistent with other platforms.
+
+## 2.2.0-alpha.3 (05.12.2019)
+
+### Improvements
+* Verimatrix VCAS DRM support
+
+## 2.2.0-alpha.2 (02.12.2019)
+
+### Improvements
+* Add base DRM and PlayReady support
+
+## 2.2.0-alpha.1 (19.11.2019)
+
+### Improvements
+
+* `StatefulVideo` introduced with ZombieBox 2.3.0
+
+## 2.1.2 (18.09.2019)
 
 ### Fixes
 * Fixed `launch` and `inspect` CLI commands not being able to demand app id.
