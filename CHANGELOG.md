@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1 (17.01.2020)
+* Init gracefully if some platform data could not be fetched.
+
 ## 2.2.0 (28.12.2019)
 
 Functionally identical to `2.2.0-rc.1`. Changes listed are since last stable release (`2.1.2`)
