@@ -1,7 +1,7 @@
 /*
  * This file is part of the ZombieBox package.
  *
- * Copyright (c) 2014-2019, Interfaced
+ * Copyright © 2014-2020, Interfaced
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -40,10 +40,7 @@ async function exec(toolsDir, command, args, expectedSuccessMessage) {
 	);
 
 	if (expectedSuccessMessage && !result.stdout.includes(expectedSuccessMessage)) {
-		console.log(result.stdout);
-		console.error(result.stderr);
-
-		throw new Error(`${command} failed`);
+		throw new Error(`${command} failed\n${result.stdout}\n${result.stderr}`);
 	}
 
 	return result.all;
@@ -78,8 +75,6 @@ async function build(toolsDir, srcDir, outDir = srcDir) {
 		'ares-package',
 		[srcDir, '--outdir', outDir, '--no-minify']
 	);
-
-	console.log(`The ipk package was built into ${outDir}`);
 }
 
 
@@ -96,7 +91,6 @@ async function install(toolsDir, ipk, deviceName) {
 		[ipk, '-d', deviceName],
 		'Success'
 	);
-	console.log(`Installed ${path.basename(ipk)}`);
 }
 
 
@@ -113,7 +107,6 @@ async function launch(toolsDir, appId, deviceName) {
 		[appId, '-d', deviceName],
 		'Launched'
 	);
-	console.log(`Launched ${appId}`);
 }
 
 
@@ -151,7 +144,6 @@ async function uninstall(toolsDir, appId, deviceName) {
 		'ares-install',
 		['-d', deviceName, '--remove', appId]
 	);
-	console.log(`Uninstalled ${appId}`);
 }
 
 

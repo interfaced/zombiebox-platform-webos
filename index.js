@@ -1,7 +1,7 @@
 /*
  * This file is part of the ZombieBox package.
  *
- * Copyright (c) 2014-2019, Interfaced
+ * Copyright © 2014-2020, Interfaced
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,7 +12,7 @@ const fse = require('fs-extra');
 const imageSize = require('image-size');
 const path = require('path');
 const inquirer = require('inquirer');
-const {AbstractPlatform, utils: {mergeConfigs}} = require('zombiebox');
+const {AbstractPlatform, utils: {mergeConfigs}, logger: zbLogger} = require('zombiebox');
 const {
 	getInstalledApps,
 	build,
@@ -21,6 +21,8 @@ const {
 	inspect,
 	uninstall
 } = require('./cli/ares');
+
+const logger = zbLogger.createChild('webOS');
 
 
 /**
@@ -83,6 +85,8 @@ class PlatformWebOS extends AbstractPlatform {
 		const selectAppFromDevice = async (toolsDir, deviceName) => {
 			const installedApps = await getInstalledApps(toolsDir, deviceName);
 
+			logger.silly(`Installed apps: ${installedApps.join(', ')}`);
+
 			if (!installedApps.length) {
 				throw new Error('No apps installed on device');
 			}
@@ -96,13 +100,6 @@ class PlatformWebOS extends AbstractPlatform {
 
 			return appId;
 		};
-
-		const logify = (promise) => promise
-			.catch((error) => {
-				if (error) {
-					console.error(error.message);
-				}
-			});
 
 		/**
 		 * @param {Yargs} yargs
@@ -121,14 +118,14 @@ class PlatformWebOS extends AbstractPlatform {
 				.middleware(
 					async (argv) => {
 						if (!argv.appId) {
-							console.info('Application identifier was not provided.');
+							logger.info('Application identifier was not provided.');
 
 							try {
 								argv.appId = await this._findAppId(distPath);
 
-								console.warn(`Using application ID ${argv.appId} from local build folder`);
+								logger.info(`Using application ID ${argv.appId} from local build folder`);
 							} catch (e) {
-								console.error(`Could not extract application ID from local build: ${e.message}`);
+								logger.error(`Could not extract application ID from local build: ${e.message}`);
 
 								argv.appId = await selectAppFromDevice(toolsDir, argv.device);
 							}
@@ -152,9 +149,13 @@ class PlatformWebOS extends AbstractPlatform {
 				'Install app on a device',
 				demandDevice,
 				async ({device}) => {
+					logger.verbose(`Installing application`);
 					const ipk = await this._findIpk(distPath);
 
-					logify(install(toolsDir, ipk, device));
+					logger.debug(`Found ipk file: ${ipk}`);
+
+					await install(toolsDir, ipk, device);
+					logger.info(`Installation successful`);
 				}
 			)
 			.command(
@@ -164,7 +165,11 @@ class PlatformWebOS extends AbstractPlatform {
 					demandDevice(yargs);
 					demandAppId(yargs);
 				},
-				({device, appId}) => logify(launch(toolsDir, appId, device))
+				async ({device, appId}) => {
+					logger.verbose(`Launching ${appId} on ${device}`);
+					await launch(toolsDir, appId, device);
+					logger.info(`Application launched`);
+				}
 			)
 			.command(
 				'inspect <device> [appId]',
@@ -173,7 +178,10 @@ class PlatformWebOS extends AbstractPlatform {
 					demandDevice(yargs);
 					demandAppId(yargs);
 				},
-				({device, appId}) => logify(inspect(toolsDir, appId, device))
+				async ({device, appId}) => {
+					logger.verbose(`Starting ${appId} on ${device} with inspector`);
+					await inspect(toolsDir, appId, device);
+				}
 			)
 			.command(
 				'uninstall <device> [appId]',
@@ -182,22 +190,23 @@ class PlatformWebOS extends AbstractPlatform {
 					demandDevice(yargs);
 					demandAppId(yargs);
 				},
-				({device, appId}) => logify(uninstall(toolsDir, appId, device))
+				async ({device, appId}) => {
+					logger.verbose(`Uninstalling ${appId} from ${device}`);
+					await uninstall(toolsDir, appId, device);
+					logger.info(`Application uninstalled`);
+				}
 			)
 			.command(
 				'list <device>',
 				'List installed applications on a device',
 				demandDevice,
 				async ({device}) => {
-					const apps = await logify(getInstalledApps(toolsDir, device));
-					if (!apps) {
-						return;
-					}
+					logger.verbose(`Querying installed apps on ${device}`);
+					const apps = await getInstalledApps(toolsDir, device);
 					if (apps.length) {
-						console.log('Installed applications:');
-						console.log(apps.join('\n'));
+						logger.output(`Installed applications: \n\t${apps.join('\n\t')}`);
 					} else {
-						console.log('No apps installed');
+						logger.output('No apps installed');
 					}
 				}
 			)
@@ -206,10 +215,11 @@ class PlatformWebOS extends AbstractPlatform {
 				'Remove all installed apps from a device',
 				demandDevice,
 				async ({device}) => {
+					logger.verbose(`Cleaning installed apps from ${device}`);
 					const installedApps = await getInstalledApps(toolsDir, device);
 
 					if (!installedApps.length) {
-						console.log('No apps installed');
+						logger.output('No apps installed, nothing to clean');
 						return;
 					}
 
@@ -221,21 +231,27 @@ class PlatformWebOS extends AbstractPlatform {
 						default: installedApps
 					});
 
-					return Promise.all(confirmed.map((appId) => logify(uninstall(toolsDir, appId, device))));
+					await Promise.all(confirmed.map((appId) => uninstall(toolsDir, appId, device)));
+					logger.info(`Cleanup done`);
 				}
 			)
-			.demandCommand(1, 1, 'No command specified');
+			.demandCommand(1, 1, 'No command specified')
+			.fail((message, error) => {
+				if (message) {
+					logger.error(message);
+				}
+				if (error instanceof Error) {
+					logger.error(error.toString());
+					logger.debug(error.stack);
+				}
+				process.exit(1);
+			});
 	}
 
 	/**
 	 * @override
 	 */
-	async buildApp(app, distDir) {
-		/**
-		 * @type {Array<string>}
-		 */
-		const warnings = [];
-		const buildHelper = app.getBuildHelper();
+	async pack(app, distDir) {
 		const config = app.getConfig();
 		const {name, version} = app.getAppPackageJson();
 		/**
@@ -243,15 +259,10 @@ class PlatformWebOS extends AbstractPlatform {
 		 */
 		const originalUserConfig = config.platforms.webos;
 
-		warnings.push(
-			await buildHelper.writeIndexHTML(path.join(distDir, 'index.html'))
-		);
-
 		const defaultAppInfo = this._createDefaultAppInfo(name, version);
 
 		const userImgConfig = await this._createUserImgConfig(originalUserConfig.img);
-		const {images, warnings: imagesCheckWarnings} = await this._checkAndFilterImages(userImgConfig);
-		warnings.push(imagesCheckWarnings.join('\n'));
+		const images = await this._checkAndFilterImages(userImgConfig);
 
 		const defaultImgConfig = this._generateDefaultImageFullPathObject(__dirname);
 		const resultImgConfig = mergeConfigs(defaultImgConfig, images);
@@ -264,13 +275,9 @@ class PlatformWebOS extends AbstractPlatform {
 			PlatformWebOS.ImageDistPath
 		);
 
-		buildHelper.copyStaticFiles(distDir);
-
 		await fse.writeJson(path.join(distDir, 'appinfo.json'), resultAppInfo);
 
 		await build(config.platforms.webos.toolsDir, distDir);
-
-		return warnings.filter(Boolean).join('\n');
 	}
 
 	/**
@@ -314,10 +321,7 @@ class PlatformWebOS extends AbstractPlatform {
 
 	/**
 	 * @param {Object<string, string>} files
-	 * @return {{
-	 *     images: Object<PlatformWebOS.ImageName, string>,
-	 *     warnings: Array<string>
-	 * }}
+	 * @return {Object<PlatformWebOS.ImageName, string>}
 	 * @protected
 	 */
 	async _checkAndFilterImages(files) {
@@ -384,16 +388,13 @@ class PlatformWebOS extends AbstractPlatform {
 				try {
 					await check(createImageChecks(imageName, imagePath));
 
-					accumulator.images[imageName] = imagePath;
+					accumulator[imageName] = imagePath;
 				} catch (warning) {
-					accumulator.warnings.push(warning);
+					logger.warn(warning);
 				}
 
 				return Promise.resolve(accumulator);
-			}, Promise.resolve({
-				images: {},
-				warnings: []
-			}));
+			}, Promise.resolve({}));
 	}
 
 	/**
@@ -437,6 +438,7 @@ class PlatformWebOS extends AbstractPlatform {
 			.map((sourcePath) => {
 				const destinationPath = path.join(imagesDist, path.basename(sourcePath));
 
+				logger.silly(`Copying, ${sourcePath} to ${destinationPath}`);
 				return fse.copy(sourcePath, destinationPath);
 			});
 

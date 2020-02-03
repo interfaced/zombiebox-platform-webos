@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.2 (03.02.2020)
+* Support ZombieBox 2.6
+* Better logging and output
+
 ## 2.2.1 (17.01.2020)
 * Init gracefully if some platform data could not be fetched.
 
