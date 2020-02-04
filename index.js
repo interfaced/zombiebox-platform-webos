@@ -180,7 +180,8 @@ class PlatformWebOS extends AbstractPlatform {
 				},
 				async ({device, appId}) => {
 					logger.verbose(`Starting ${appId} on ${device} with inspector`);
-					await inspect(toolsDir, appId, device);
+					const debuggerUrl = await inspect(toolsDir, appId, device);
+					logger.output(`Debugger url: ${debuggerUrl}`);
 				}
 			)
 			.command(
@@ -244,6 +245,8 @@ class PlatformWebOS extends AbstractPlatform {
 					logger.error(error.toString());
 					logger.debug(error.stack);
 				}
+
+				yargs.showHelp();
 				process.exit(1);
 			});
 	}

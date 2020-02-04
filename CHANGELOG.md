@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.3 (03.02.2020)
+* Fix `inspect` command producing unnecessary uncontrollable logs.
+
 ## 2.2.2 (03.02.2020)
 * Support ZombieBox 2.6
 * Better logging and output

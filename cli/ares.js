@@ -114,21 +114,25 @@ async function launch(toolsDir, appId, deviceName) {
  * @param {string} toolsDir
  * @param {string} appId
  * @param {string} deviceName
- * @return {Promise}
+ * @return {Promise<string>}
  */
 async function inspect(toolsDir, appId, deviceName) {
 	const executable = getExecutable(toolsDir, 'ares-inspect');
 
 	const subprocess = execa(
 		executable,
-		['-d', deviceName, appId],
-		{
-			all: true
-		}
+		['-d', deviceName, appId]
 	);
 
-	subprocess.stdout.pipe(process.stdout);
-	await subprocess;
+	return new Promise((resolve) => {
+		subprocess.stdout.on('data', (chunk) => {
+			const line = chunk.toString();
+			const urlMarker = 'Application Debugging - ';
+			if (line.startsWith(urlMarker)) {
+				resolve(line.slice(urlMarker.length).trim());
+			}
+		});
+	});
 }
 
 
