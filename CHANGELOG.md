@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.4 (04.03.2020)
+* Fix some viewport modes not behaving as expected
+* Update to ZombieBox 2.7 (improve start position handling)
+
 ## 2.2.3 (03.02.2020)
 * Fix `inspect` command producing unnecessary uncontrollable logs.
 
