@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.5 (06.03.2020)
+* Remove `Input.isPointingDeviceActive` override that forced mouse state to always be active
+
 ## 2.2.4 (04.03.2020)
 * Fix some viewport modes not behaving as expected
 * Update to ZombieBox 2.7 (improve start position handling)

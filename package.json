@@ -1,7 +1,7 @@
 {
   "name": "zombiebox-platform-webos",
   "description": "LG webOS Smart TV support abstraction layer for ZombieBox framework",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "license": "MIT",
   "author": "Interfaced (https://interfaced.tv)",
   "homepage": "https://github.com/interfaced/zombiebox-platform-webos",
