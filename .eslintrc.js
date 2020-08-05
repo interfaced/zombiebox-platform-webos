@@ -1,4 +1,13 @@
-const currentYear = (new Date).getFullYear();
+/*
+ * This file is part of the ZombieBox package.
+ *
+ * Copyright © 2014-2020, Interfaced
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+const currentYear = (new Date()).getFullYear();
 const copyrightHeader = [
 	'',
 	' * This file is part of the ZombieBox package.',
@@ -20,7 +29,7 @@ module.exports = {
 			files: ['lib/**/*.js'],
 			extends: 'interfaced/esm',
 			settings: {
-				'import/resolver': 'zombiebox',
+				'import/resolver': 'zombiebox'
 			},
 			rules: {
 				'header/header': ['error', 'block', copyrightHeader]
@@ -32,7 +41,7 @@ module.exports = {
 			}
 		},
 		{
-			files: ['index.js', 'cli/**/*.js'],
+			files: ['.eslintrc.js', 'index.js', 'cli/**/*.js'],
 			extends: 'interfaced/node',
 			rules: {
 				'header/header': ['error', 'block', copyrightHeader]

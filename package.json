@@ -1,7 +1,7 @@
 {
   "name": "zombiebox-platform-webos",
   "description": "LG webOS Smart TV support abstraction layer for ZombieBox framework",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "license": "MIT",
   "author": "Interfaced (https://interfaced.tv)",
   "homepage": "https://github.com/interfaced/zombiebox-platform-webos",
@@ -37,23 +37,23 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "execa": "^4.0.0",
-    "fs-extra": "^8.1.0",
+    "execa": "^4.0.3",
+    "fs-extra": "^9.0.1",
     "image-size": "^0.8.3",
-    "inquirer": "^7.0.5"
+    "inquirer": "^7.3.3"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-config-interfaced": "^2.0.0",
+    "eslint": "^7.6.0",
+    "eslint-config-interfaced": "^2.1.1",
     "eslint-import-resolver-zombiebox": "^1.0.1",
     "eslint-plugin-header": "^3.0.0",
-    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-interfaced": "^2.0.0",
-    "eslint-plugin-jsdoc": "^22.0.0",
-    "eslint-plugin-node": "^11.0.0",
-    "zombiebox": "^2.7.0"
+    "eslint-plugin-jsdoc": "^30.2.1",
+    "eslint-plugin-node": "^11.1.0",
+    "zombiebox": "^2.7.3"
   },
   "peerDependencies": {
-    "zombiebox": "^2.7.0"
+    "zombiebox": "^2.7.3"
   }
 }

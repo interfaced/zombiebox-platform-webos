@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.6 (05.08.2020)
+* Workaround for playing event not being fired after seeeking on webOS 1.4 
+
 ## 2.2.5 (06.03.2020)
 * Remove `Input.isPointingDeviceActive` override that forced mouse state to always be active
 
