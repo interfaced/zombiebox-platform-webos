@@ -64,16 +64,19 @@ async function getInstalledApps(toolsDir, deviceName) {
 
 /**
  * @param {string} toolsDir
- * @param {string} srcDir
+ * @param {Array<string>|string} srcDir
  * @param {string=} outDir
  * @return {Promise}
  * @protected
  */
-async function build(toolsDir, srcDir, outDir = srcDir) {
+async function build(toolsDir, srcDir, outDir) {
+	const isSrcArray = Array.isArray(srcDir);
+	const normalizeOutDir = outDir || isSrcArray ? srcDir[0] : srcDir;
+
 	await exec(
 		toolsDir,
 		'ares-package',
-		[srcDir, '--outdir', outDir, '--no-minify']
+		[...(isSrcArray ? srcDir : [srcDir]), '--outdir', normalizeOutDir, '--no-minify']
 	);
 }
 
