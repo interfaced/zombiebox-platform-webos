@@ -280,7 +280,9 @@ class PlatformWebOS extends AbstractPlatform {
 
 		await fse.writeJson(path.join(distDir, 'appinfo.json'), resultAppInfo);
 
-		await build(config.platforms.webos.toolsDir, distDir);
+		const dirsToBuild = [distDir, originalUserConfig.serviceDir].filter(Boolean);
+
+		await build(config.platforms.webos.toolsDir, dirsToBuild);
 	}
 
 	/**
